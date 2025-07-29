@@ -55,7 +55,7 @@ app.post('/api/convert', upload.array('file'), async (req, res) => {
       'application/vnd.oasis.opendocument.presentation', // odp
       'application/rtf', // rtf
     ];
-    const officeExts = ['docx','doc','xlsx','xls','pptx','ppt','odt','ods','odp','rtf'];
+    const officeExts = ['docx','doc','xlsx','xls','pptx','ppt','odt','ods','odp','rtf','txt'];
     // If any file is an office file and the target format is supported
     if (files.some(f => officeMimes.includes(f.mimetype) || officeExts.some(ext => f.originalname.toLowerCase().endsWith('.' + ext)))) {
       // Only support single file for office conversion for now
@@ -163,44 +163,113 @@ app.post('/api/convert', upload.array('file'), async (req, res) => {
       }
     }
     // Single image conversion (first file only)
-    if (["jpg", "jpeg", "png", "webp", "gif", "bmp", "tiff"].includes(format)) {
+    if (["jpg", "jpeg", "png", "webp", "gif", "tiff"].includes(format)) {
       const file = files[0];
       if (!file) return res.status(400).json({ error: 'No file provided.' });
-      const outputBuffer = await sharp(file.buffer)
-        .toFormat(format === 'jpg' ? 'jpeg' : format)
-        .toBuffer();
-      res.setHeader('Content-Disposition', `attachment; filename=converted.${format}`);
-      res.setHeader('Content-Type', `image/${format === 'jpg' ? 'jpeg' : format}`);
-      return res.send(outputBuffer);
+      try {
+        let sharpInstance = sharp(file.buffer);
+        
+        // Handle different input formats properly
+        if (format === 'jpg' || format === 'jpeg') {
+          sharpInstance = sharpInstance.jpeg({ quality: 90 });
+        } else if (format === 'png') {
+          sharpInstance = sharpInstance.png();
+        } else if (format === 'webp') {
+          sharpInstance = sharpInstance.webp({ quality: 90 });
+        } else if (format === 'gif') {
+          sharpInstance = sharpInstance.gif();
+        } else if (format === 'tiff') {
+          sharpInstance = sharpInstance.tiff();
+        }
+        
+        const outputBuffer = await sharpInstance.toBuffer();
+        res.setHeader('Content-Disposition', `attachment; filename=converted.${format}`);
+        res.setHeader('Content-Type', `image/${format === 'jpg' ? 'jpeg' : format}`);
+        return res.send(outputBuffer);
+      } catch (error) {
+        console.error('Image conversion error:', error);
+        return res.status(500).json({ error: `Image conversion failed: ${error.message}` });
+      }
     }
     // Video conversion (mp4, mkv, avi, mov)
     const videoFormats = ["mp4", "mkv", "avi", "mov"];
     if (videoFormats.includes(format)) {
       const file = files[0];
       if (!file) return res.status(400).json({ error: 'No video file provided.' });
+      
+      console.log('Video conversion started:', {
+        originalName: file.originalname,
+        mimetype: file.mimetype,
+        size: file.buffer.length,
+        targetFormat: format
+      });
+      
       // Write buffer to temp file
       const inputTmp = tmp.tmpNameSync({ postfix: path.extname(file.originalname) });
       fs.writeFileSync(inputTmp, file.buffer);
       const outputTmp = tmp.tmpNameSync({ postfix: '.' + format });
+      
       try {
         await new Promise((resolve, reject) => {
-          ffmpeg(inputTmp)
-            .toFormat(format === 'mkv' ? 'matroska' : format)
-            .on('end', resolve)
+          let ffmpegCommand = ffmpeg(inputTmp);
+          
+          // Configure based on output format
+          if (format === 'mp4') {
+            ffmpegCommand = ffmpegCommand.toFormat('mp4').videoCodec('libx264').audioCodec('aac');
+          } else if (format === 'mkv') {
+            ffmpegCommand = ffmpegCommand.toFormat('matroska');
+          } else if (format === 'avi') {
+            ffmpegCommand = ffmpegCommand.toFormat('avi').videoCodec('libx264').audioCodec('mp3');
+          } else if (format === 'mov') {
+            ffmpegCommand = ffmpegCommand.toFormat('mov').videoCodec('libx264').audioCodec('aac');
+          }
+          
+          ffmpegCommand
+            .on('start', (commandLine) => {
+              console.log('FFmpeg command:', commandLine);
+            })
+            .on('progress', (progress) => {
+              console.log('FFmpeg progress:', progress);
+            })
+            .on('end', () => {
+              console.log('FFmpeg video conversion completed successfully');
+              resolve();
+            })
             .on('error', (err) => {
-              console.error('FFmpeg error:', err);
-              reject(new Error('FFmpeg failed: ' + err.message));
+              console.error('FFmpeg video error:', err);
+              reject(new Error('FFmpeg video failed: ' + err.message));
             })
             .save(outputTmp);
         });
+        
+        // Check if output file exists and has content
+        if (!fs.existsSync(outputTmp)) {
+          throw new Error('Output file was not created');
+        }
+        
+        const outputStats = fs.statSync(outputTmp);
+        if (outputStats.size === 0) {
+          throw new Error('Output file is empty');
+        }
+        
+        console.log('Video output file created successfully:', {
+          path: outputTmp,
+          size: outputStats.size
+        });
+        
       } catch (ffmpegErr) {
+        console.error('Video conversion failed:', ffmpegErr);
         if (fs.existsSync(inputTmp)) fs.unlinkSync(inputTmp);
         if (fs.existsSync(outputTmp)) fs.unlinkSync(outputTmp);
         return res.status(500).json({ error: ffmpegErr.message || 'Video conversion failed.' });
       }
+      
       const outputBuffer = fs.readFileSync(outputTmp);
       fs.unlinkSync(inputTmp);
       fs.unlinkSync(outputTmp);
+      
+      console.log('Video conversion completed, sending response');
+      
       res.setHeader('Content-Disposition', `attachment; filename=converted.${format}`);
       res.setHeader('Content-Type', `video/${format}`);
       return res.send(outputBuffer);
@@ -227,8 +296,20 @@ app.post('/api/convert', upload.array('file'), async (req, res) => {
       
       try {
         await new Promise((resolve, reject) => {
-          ffmpeg(inputTmp)
-            .toFormat(format)
+          let ffmpegCommand = ffmpeg(inputTmp);
+          
+          // Configure based on output format
+          if (format === 'mp3') {
+            ffmpegCommand = ffmpegCommand.toFormat('mp3').audioCodec('libmp3lame');
+          } else if (format === 'wav') {
+            ffmpegCommand = ffmpegCommand.toFormat('wav').audioCodec('pcm_s16le');
+          } else if (format === 'aac') {
+            ffmpegCommand = ffmpegCommand.toFormat('aac').audioCodec('aac');
+          } else if (format === 'ogg') {
+            ffmpegCommand = ffmpegCommand.toFormat('ogg').audioCodec('libvorbis');
+          }
+          
+          ffmpegCommand
             .on('start', (commandLine) => {
               console.log('FFmpeg command:', commandLine);
             })
@@ -236,7 +317,7 @@ app.post('/api/convert', upload.array('file'), async (req, res) => {
               console.log('FFmpeg progress:', progress);
             })
             .on('end', () => {
-              console.log('FFmpeg conversion completed successfully');
+              console.log('FFmpeg audio conversion completed successfully');
               resolve();
             })
             .on('error', (err) => {
@@ -280,7 +361,7 @@ app.post('/api/convert', upload.array('file'), async (req, res) => {
       res.setHeader('Content-Type', contentType);
       return res.send(outputBuffer);
     }
-    return res.status(400).json({ error: 'Unsupported format.' });
+    return res.status(400).json({ error: `Unsupported format: ${format}. Supported formats: Images (jpg, jpeg, png, webp, gif, tiff), Videos (mp4, mkv, avi, mov), Audio (mp3, wav, aac, ogg), Documents (pdf, docx, txt, xlsx), Archives (zip).` });
   } catch (err) {
     return res.status(500).json({ error: err.message || 'Conversion failed.' });
   }

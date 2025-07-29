@@ -6,11 +6,11 @@ import { motion } from "framer-motion";
 import { useEffect } from "react";
 
 const categoryFormats = {
-  images: ["JPG", "PNG", "WEBP", "GIF", "BMP", "TIFF"],
+  images: ["JPG", "PNG", "WEBP", "GIF", "TIFF"],
   videos: ["MP4", "MOV", "AVI", "MKV"],
   documents: ["PDF", "DOCX", "TXT", "XLSX"],
   audio: ["MP3", "WAV", "AAC", "OGG"],
-  zip: ["ZIP", "RAR", "7Z"],
+  zip: ["ZIP"],
 };
 
 const categoryLabels = {
@@ -107,7 +107,7 @@ export default function CategoryPage() {
     if (!file) return { label: '', icon: null };
     const type = file.type;
     const name = file.name.toLowerCase();
-    if (type.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|bmp|tiff)$/.test(name)) {
+    if (type.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|tiff)$/.test(name)) {
       return { label: 'Image uploaded!', icon: <span className="text-green-500 text-xl mr-2">🖼️</span> };
     }
     if (type.startsWith('audio/') || /\.(mp3|wav|aac|ogg)$/.test(name)) {
