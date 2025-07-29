@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 
 // Add useEffect for scroll to top
 import { useEffect } from "react";
+import { FaQuestion } from "react-icons/fa";
 
 const categoryFormats = {
   images: ["JPG", "PNG", "WEBP", "GIF", "TIFF"],
@@ -43,6 +44,7 @@ export default function CategoryPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [bugText, setBugText] = useState("");
+  const [bugBoxOpen, setBugBoxOpen] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -280,35 +282,53 @@ export default function CategoryPage() {
           </motion.div>
         </motion.div>
       </main>
-      {/* Bug report box */}
-      <motion.div
-        className="w-full flex justify-center mb-8"
-        variants={fadeUp}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: false, amount: 0.7 }}
-        custom={8.5}
+      {/* Floating Bug Button */}
+      <button
+        className="fixed top-1/2 right-6 z-50 bg-[#f25c54] text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-[#e57373] transition-all"
+        style={{ transform: "translateY(-50%)" }}
+        onClick={() => setBugBoxOpen((open) => !open)}
+        aria-label="Report a bug"
       >
-        <div className="w-full max-w-xl bg-white rounded-2xl shadow p-6 flex flex-col items-center border border-[#f25c54]/20">
-          <div className="font-semibold text-lg mb-2 text-[#f25c54]">Found any bug? Let us know!</div>
-          <textarea
-            className="w-full min-h-[60px] max-h-[120px] border border-gray-300 rounded-lg p-2 mb-3 resize-y focus:ring-2 focus:ring-[#f25c54] outline-none"
-            placeholder="Describe the bug here..."
-            value={bugText}
-            onChange={e => setBugText(e.target.value)}
-          />
+        <FaQuestion className="w-6 h-6" />
+      </button>
+
+      {/* Sliding Bug Report Box */}
+      <motion.div
+        initial={{ x: '100%' }}
+        animate={{ x: bugBoxOpen ? 0 : '100%' }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        className="fixed top-0 right-0 h-full w-full max-w-sm bg-white shadow-2xl z-50 flex flex-col p-6 border-l border-[#f25c54]/20"
+        style={{ pointerEvents: bugBoxOpen ? 'auto' : 'none' }}
+      >
+        <div className="flex justify-between items-center mb-2">
+          <div className="font-semibold text-lg text-[#f25c54]">Found a bug?</div>
           <button
-            className="bg-[#f25c54] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[#e57373] transition disabled:opacity-50"
-            disabled={!bugText.trim()}
-            onClick={() => {
-              const subject = encodeURIComponent('Bug Report from ConvertEase');
-              const body = encodeURIComponent(bugText);
-              window.location.href = `mailto:aayushraut2006@gmail.com?subject=${subject}&body=${body}`;
-            }}
+            className="text-gray-400 hover:text-[#f25c54] text-2xl font-bold focus:outline-none"
+            onClick={() => setBugBoxOpen(false)}
+            aria-label="Close bug report box"
           >
-            Send Bug Report
+            &times;
           </button>
         </div>
+        <textarea
+          className="w-full min-h-[60px] max-h-[120px] border border-gray-300 rounded-lg p-2 mb-3 resize-y focus:ring-2 focus:ring-[#f25c54] outline-none"
+          placeholder="Describe the bug here..."
+          value={bugText}
+          onChange={e => setBugText(e.target.value)}
+        />
+        <button
+          className="bg-[#f25c54] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[#e57373] transition disabled:opacity-50 w-full"
+          disabled={!bugText.trim()}
+          onClick={() => {
+            const subject = encodeURIComponent('Bug Report from ConvertEase');
+            const body = encodeURIComponent(bugText);
+            window.location.href = `mailto:aayushraut2006@gmail.com?subject=${subject}&body=${body}`;
+            setBugBoxOpen(false);
+            setBugText("");
+          }}
+        >
+          Send Bug Report
+        </button>
       </motion.div>
     </div>
   );
