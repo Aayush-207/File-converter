@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FaRegImage, FaRegFileVideo, FaRegFileAlt, FaRegFileAudio, FaRegFileArchive, FaGithub, FaInstagram, FaLinkedin, FaFacebook } from "react-icons/fa";
 import heroImg from "../assets/hero.png";
-import logo from "../assets/logo.png";
 // Removed imageIcon, videoIcon, docIcon, audioIcon, zipIcon imports
 
 const categories = [
@@ -47,7 +46,6 @@ export default function Home() {
       {/* Header */}
       <header className="w-full flex items-center justify-between px-12 py-6 border-b bg-white">
         <div className="font-bold text-2xl flex items-center gap-2">
-          <img src={logo} alt="Site Logo" className="w-9 h-9 rounded-lg mr-2 object-contain bg-white" />
           <span className="text-[#000000]">ConvertEase</span>
         </div>
         <nav className="flex gap-8 text-[15px] font-medium text-gray-700">

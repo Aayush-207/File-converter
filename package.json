@@ -1,0 +1,13 @@
+{
+  "name": "converter-app",
+  "version": "1.0.0",
+  "description": "ConvertEase - Free Online File Converter",
+  "scripts": {
+    "build": "cd frontend && npm run build",
+    "start": "cd frontend && npm start",
+    "install-deps": "cd frontend && npm install"
+  },
+  "workspaces": [
+    "frontend"
+  ]
+} 

@@ -303,4 +303,13 @@ export default function CategoryPage() {
             onClick={() => {
               const subject = encodeURIComponent('Bug Report from ConvertEase');
               const body = encodeURIComponent(bugText);
-              window.location.href = `mailto:aayushraut2006@gmail.com?subject=${subject}&body=${body}`
+              window.location.href = `mailto:aayushraut2006@gmail.com?subject=${subject}&body=${body}`;
+            }}
+          >
+            Send Bug Report
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
