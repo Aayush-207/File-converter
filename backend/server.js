@@ -142,25 +142,37 @@ app.post('/api/convert', upload.array('file'), async (req, res) => {
       res.setHeader('Content-Type', 'application/pdf');
       return res.send(Buffer.from(pdfBytes));
     }
-    // ZIP/RAR/7Z archive creation
-    if (["zip", "rar", "7z"].includes(format)) {
+    // ZIP/TAR/TGZ archive creation
+    if (["zip", "tar", "tgz"].includes(format)) {
       if (!Array.isArray(files) || files.length === 0) {
         return res.status(400).json({ error: 'No files provided for archiving.' });
       }
+      let archiveType = format;
+      let contentType = '';
+      let fileExt = '';
       if (format === "zip") {
-        res.setHeader('Content-Disposition', 'attachment; filename=archive.zip');
-        res.setHeader('Content-Type', 'application/zip');
-        const archive = archiver('zip', { zlib: { level: 9 } });
-        archive.on('error', err => res.status(500).json({ error: err.message }));
-        archive.pipe(res);
-        files.forEach(f => {
-          archive.append(f.buffer, { name: f.originalname });
-        });
-        archive.finalize();
-        return;
-      } else if (format === "rar" || format === "7z") {
-        return res.status(501).json({ error: 'RAR/7Z archive creation is not implemented yet.' });
+        archiveType = "zip";
+        contentType = "application/zip";
+        fileExt = "zip";
+      } else if (format === "tar") {
+        archiveType = "tar";
+        contentType = "application/x-tar";
+        fileExt = "tar";
+      } else if (format === "tgz") {
+        archiveType = "tar";
+        contentType = "application/gzip";
+        fileExt = "tar.gz";
       }
+      res.setHeader('Content-Disposition', `attachment; filename=archive.${fileExt}`);
+      res.setHeader('Content-Type', contentType);
+      const archive = archiver(archiveType, archiveType === 'tar' && format === 'tgz' ? { gzip: true } : {});
+      archive.on('error', err => res.status(500).json({ error: err.message }));
+      archive.pipe(res);
+      files.forEach(f => {
+        archive.append(f.buffer, { name: f.originalname });
+      });
+      archive.finalize();
+      return;
     }
     // Single image conversion (first file only)
     if (["jpg", "jpeg", "png", "webp", "gif", "tiff"].includes(format)) {

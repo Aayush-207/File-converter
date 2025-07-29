@@ -10,7 +10,7 @@ const categoryFormats = {
   videos: ["MP4", "MOV", "AVI", "MKV"],
   documents: ["PDF", "DOCX", "TXT", "XLSX"],
   audio: ["MP3", "WAV", "AAC", "OGG"],
-  zip: ["ZIP"],
+  zip: ["ZIP", "TAR", "TGZ"],
 };
 
 const categoryLabels = {
